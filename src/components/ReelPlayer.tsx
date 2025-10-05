@@ -8,16 +8,18 @@ interface ReelPlayerProps {
   reel: Reel;
   isActive: boolean;
   onSwipeUp: () => void;
+  onSwipeLeft: () => void;
   onLike: () => void;
   onSave: () => void;
 }
 
-export function ReelPlayer({ reel, isActive, onSwipeUp, onLike, onSave }: ReelPlayerProps) {
+export function ReelPlayer({ reel, isActive, onSwipeUp, onSwipeLeft, onLike, onSave }: ReelPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [showHeart, setShowHeart] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const touchStartY = useRef(0);
+  const touchStartX = useRef(0);
 
   useEffect(() => {
     if (!videoRef.current) return;
@@ -53,13 +55,19 @@ export function ReelPlayer({ reel, isActive, onSwipeUp, onLike, onSave }: ReelPl
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
+    touchStartX.current = e.touches[0].clientX;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     const touchEndY = e.changedTouches[0].clientY;
-    const diff = touchStartY.current - touchEndY;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diffY = touchStartY.current - touchEndY;
+    const diffX = touchStartX.current - touchEndX;
 
-    if (diff > 100) {
+    // Detect swipe left (horizontal swipe has priority over vertical)
+    if (Math.abs(diffX) > Math.abs(diffY) && diffX > 100) {
+      onSwipeLeft();
+    } else if (diffY > 100) {
       onSwipeUp();
     }
   };
@@ -132,10 +140,16 @@ export function ReelPlayer({ reel, isActive, onSwipeUp, onLike, onSave }: ReelPl
               ))}
             </div>
 
-            {/* Swipe Up Hint */}
-            <div className="flex items-center gap-2 text-white/80 text-sm animate-pulse">
-              <span>Swipe up for itinerary</span>
-              <span className="text-lg">↑</span>
+            {/* Swipe Hints */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-white/80 text-sm animate-pulse">
+                <span>Swipe left to plan trip</span>
+                <span className="text-lg">←</span>
+              </div>
+              <div className="flex items-center gap-2 text-white/60 text-xs">
+                <span>Swipe up for details</span>
+                <span className="text-base">↑</span>
+              </div>
             </div>
           </div>
 

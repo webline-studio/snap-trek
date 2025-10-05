@@ -64,6 +64,10 @@ export default function Feed() {
     setShowItinerary(true);
   };
 
+  const handleSwipeLeft = () => {
+    setShowItinerary(true);
+  };
+
   const handleBook = () => {
     toast.success("Booking feature coming soon! 🎉", {
       description: "We'll notify you when booking is available.",
@@ -89,6 +93,7 @@ export default function Feed() {
               reel={reel}
               isActive={index === currentIndex}
               onSwipeUp={handleSwipeUp}
+              onSwipeLeft={handleSwipeLeft}
               onLike={() => handleLike(reel.id)}
               onSave={() => handleSave(reel.id)}
             />
