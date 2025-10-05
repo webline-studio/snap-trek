@@ -15,7 +15,11 @@ export default function Auth() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success(isLogin ? "Welcome back!" : "Account created successfully!");
+    if (isLogin) {
+      toast.success("Welcome back, explorer!");
+    } else {
+      toast.success("Account created! Welcome to TravelSnaps! 🎉");
+    }
     navigate("/");
   };
 

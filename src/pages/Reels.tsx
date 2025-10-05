@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ReelPlayer } from "@/components/ReelPlayer";
-import { ItineraryOverlay } from "@/components/ItineraryOverlay";
-import { mockReels, mockPackages } from "@/data/mockData";
+import { mockReels } from "@/data/mockData";
 import { Reel } from "@/types/travel";
 import { toast } from "sonner";
 
-export default function Feed() {
+export default function Reels() {
+  const navigate = useNavigate();
   const [reels, setReels] = useState<Reel[]>(mockReels);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showItinerary, setShowItinerary] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,9 +43,7 @@ export default function Feed() {
           : reel
       )
     );
-    toast.success("Liked!", {
-      duration: 1000,
-    });
+    toast.success("Liked!", { duration: 1000 });
   };
 
   const handleSave = (reelId: string) => {
@@ -60,28 +58,12 @@ export default function Feed() {
     });
   };
 
-  const handleSwipeUp = () => {
-    setShowItinerary(true);
+  const handleSwipeLeft = (reelId: string) => {
+    navigate(`/plan/${reelId}`);
   };
-
-  const handleSwipeLeft = () => {
-    setShowItinerary(true);
-  };
-
-  const handleBook = () => {
-    toast.success("Booking feature coming soon! 🎉", {
-      description: "We'll notify you when booking is available.",
-      duration: 3000,
-    });
-    setShowItinerary(false);
-  };
-
-  const currentReel = reels[currentIndex];
-  const currentPackage = mockPackages[currentReel?.id];
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {/* Reels Container */}
       <div
         ref={containerRef}
         className="w-full h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth"
@@ -92,23 +74,13 @@ export default function Feed() {
             <ReelPlayer
               reel={reel}
               isActive={index === currentIndex}
-              onSwipeUp={handleSwipeUp}
-              onSwipeLeft={handleSwipeLeft}
+              onSwipeLeft={() => handleSwipeLeft(reel.id)}
               onLike={() => handleLike(reel.id)}
               onSave={() => handleSave(reel.id)}
             />
           </div>
         ))}
       </div>
-
-      {/* Itinerary Overlay */}
-      <ItineraryOverlay
-        isOpen={showItinerary}
-        onClose={() => setShowItinerary(false)}
-        package={currentPackage}
-        locationName={currentReel?.location.name || ""}
-        onBook={handleBook}
-      />
     </div>
   );
 }

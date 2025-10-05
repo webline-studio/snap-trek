@@ -1,24 +1,27 @@
 import { useState, useRef, useEffect } from "react";
-import { Heart, MessageCircle, Send, Bookmark, MoreVertical, Volume2, VolumeX } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Heart, MessageCircle, Send, Bookmark, Volume2, VolumeX, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Reel } from "@/types/travel";
 
 interface ReelPlayerProps {
   reel: Reel;
   isActive: boolean;
-  onSwipeUp: () => void;
   onSwipeLeft: () => void;
   onLike: () => void;
   onSave: () => void;
 }
 
-export function ReelPlayer({ reel, isActive, onSwipeUp, onSwipeLeft, onLike, onSave }: ReelPlayerProps) {
+export function ReelPlayer({
+  reel,
+  isActive,
+  onSwipeLeft,
+  onLike,
+  onSave,
+}: ReelPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [showHeart, setShowHeart] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const touchStartY = useRef(0);
   const touchStartX = useRef(0);
 
   useEffect(() => {
@@ -54,21 +57,15 @@ export function ReelPlayer({ reel, isActive, onSwipeUp, onSwipeLeft, onLike, onS
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
     touchStartX.current = e.touches[0].clientX;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEndY = e.changedTouches[0].clientY;
-    const touchEndX = e.changedTouches[0].clientX;
-    const diffY = touchStartY.current - touchEndY;
-    const diffX = touchStartX.current - touchEndX;
+    const diffX = touchStartX.current - e.changedTouches[0].clientX;
 
-    // Detect swipe left (horizontal swipe has priority over vertical)
-    if (Math.abs(diffX) > Math.abs(diffY) && diffX > 100) {
+    // Detect swipe left
+    if (diffX > 100) {
       onSwipeLeft();
-    } else if (diffY > 100) {
-      onSwipeUp();
     }
   };
 
@@ -85,13 +82,13 @@ export function ReelPlayer({ reel, isActive, onSwipeUp, onSwipeLeft, onLike, onS
 
   return (
     <div
-      className="relative w-full h-full bg-black overflow-hidden snap-start snap-always"
+      className="relative w-full h-full bg-black overflow-hidden"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
     >
-      {/* Video Background */}
+      {/* Image Background */}
       <img
         src={reel.posterUrl}
         alt={reel.title}
@@ -107,6 +104,14 @@ export function ReelPlayer({ reel, isActive, onSwipeUp, onSwipeLeft, onLike, onS
           <Heart className="w-32 h-32 text-white fill-white animate-heart-beat" />
         </div>
       )}
+
+      {/* Swipe Hint */}
+      <div className="absolute bottom-24 left-1/2 -translate-x-1/2 animate-fade-in pointer-events-none">
+        <div className="bg-black/60 backdrop-blur-sm px-4 py-2 rounded-full flex items-center gap-2">
+          <ArrowLeft className="w-4 h-4 animate-pulse" />
+          <span className="text-sm text-white">Swipe left to plan trip</span>
+        </div>
+      </div>
 
       {/* Bottom Info */}
       <div className="absolute bottom-0 left-0 right-0 p-6 pb-24 md:pb-6 z-10">
@@ -129,7 +134,7 @@ export function ReelPlayer({ reel, isActive, onSwipeUp, onSwipeLeft, onLike, onS
             </p>
 
             {/* Tags */}
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2">
               {reel.tags.map((tag) => (
                 <span
                   key={tag}
@@ -138,18 +143,6 @@ export function ReelPlayer({ reel, isActive, onSwipeUp, onSwipeLeft, onLike, onS
                   #{tag}
                 </span>
               ))}
-            </div>
-
-            {/* Swipe Hints */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-white/80 text-sm animate-pulse">
-                <span>Swipe left to plan trip</span>
-                <span className="text-lg">←</span>
-              </div>
-              <div className="flex items-center gap-2 text-white/60 text-xs">
-                <span>Swipe up for details</span>
-                <span className="text-base">↑</span>
-              </div>
             </div>
           </div>
 

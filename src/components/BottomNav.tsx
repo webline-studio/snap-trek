@@ -1,4 +1,4 @@
-import { Home, Compass, Bookmark, User } from "lucide-react";
+import { Home, Compass, MessageCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation, Link } from "react-router-dom";
 
@@ -7,8 +7,8 @@ export function BottomNav() {
 
   const navItems = [
     { icon: Home, label: "Home", path: "/" },
-    { icon: Compass, label: "Explore", path: "/explore" },
-    { icon: Bookmark, label: "Saved", path: "/saved" },
+    { icon: Compass, label: "Reels", path: "/reels" },
+    { icon: MessageCircle, label: "Chat", path: "/chat" },
     { icon: User, label: "Profile", path: "/profile" },
   ];
 
