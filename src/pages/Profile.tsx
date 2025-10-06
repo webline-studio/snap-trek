@@ -2,10 +2,10 @@ import { Settings, MapPin, Heart, Bookmark, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BottomNav } from "@/components/BottomNav";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Profile() {
-  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   const stats = [
     { label: "Trips Booked", value: "3", icon: MapPin },
@@ -34,9 +34,11 @@ export default function Profile() {
               alt="Profile"
               className="w-24 h-24 rounded-full mb-4 border-4 border-primary/20"
             />
-            <h2 className="text-2xl font-bold mb-1">Travel Enthusiast</h2>
-            <p className="text-muted-foreground mb-4">traveler@travelsnaps.com</p>
-            <Button variant="outline" onClick={() => navigate("/auth")}>
+            <h2 className="text-2xl font-bold mb-1">
+              {user?.user_metadata?.username || "Traveler"}
+            </h2>
+            <p className="text-muted-foreground mb-4">{user?.email}</p>
+            <Button variant="outline">
               Edit Profile
             </Button>
           </div>
@@ -89,7 +91,7 @@ export default function Profile() {
         </div>
 
         {/* Logout */}
-        <Button variant="outline" className="w-full" onClick={() => navigate("/auth")}>
+        <Button variant="outline" className="w-full" onClick={signOut}>
           <LogOut className="w-4 h-4 mr-2" />
           Sign Out
         </Button>

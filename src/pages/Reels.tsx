@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ReelPlayer } from "@/components/ReelPlayer";
+import { BottomNav } from "@/components/BottomNav";
 import { mockReels } from "@/data/mockData";
 import { Reel } from "@/types/travel";
 import { toast } from "sonner";
@@ -63,24 +64,27 @@ export default function Reels() {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
-      <div
-        ref={containerRef}
-        className="w-full h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-      >
-        {reels.map((reel, index) => (
-          <div key={reel.id} className="w-full h-screen snap-start">
-            <ReelPlayer
-              reel={reel}
-              isActive={index === currentIndex}
-              onSwipeLeft={() => handleSwipeLeft(reel.id)}
-              onLike={() => handleLike(reel.id)}
-              onSave={() => handleSave(reel.id)}
-            />
-          </div>
-        ))}
+    <>
+      <div className="relative w-full h-screen overflow-hidden">
+        <div
+          ref={containerRef}
+          className="w-full h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {reels.map((reel, index) => (
+            <div key={reel.id} className="w-full h-screen snap-start">
+              <ReelPlayer
+                reel={reel}
+                isActive={index === currentIndex}
+                onSwipeLeft={() => handleSwipeLeft(reel.id)}
+                onLike={() => handleLike(reel.id)}
+                onSave={() => handleSave(reel.id)}
+              />
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+      <BottomNav />
+    </>
   );
 }

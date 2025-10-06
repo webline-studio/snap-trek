@@ -1,26 +1,83 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Plane } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import heroImage from "@/assets/hero-travel.jpg";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isLogin) {
-      toast.success("Welcome back, explorer!");
-    } else {
-      toast.success("Account created! Welcome to TravelSnaps! 🎉");
+  useEffect(() => {
+    if (user) {
+      navigate("/");
     }
-    navigate("/");
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+        toast.success("Welcome back!");
+        navigate("/");
+      } else {
+        const redirectUrl = `${window.location.origin}/`;
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: redirectUrl,
+            data: {
+              username: username || email.split("@")[0],
+            },
+          },
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          toast.success("Account created! Welcome to TravelSnaps!");
+          navigate("/");
+        }
+      }
+    } catch (error: any) {
+      toast.error(error.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign in with Google");
+    }
   };
 
   return (
@@ -50,6 +107,19 @@ export default function Auth() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Username</label>
+                <Input
+                  type="text"
+                  placeholder="traveler123"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="h-11"
+                />
+              </div>
+            )}
+
             <div>
               <label className="text-sm font-medium mb-1.5 block">Email</label>
               <Input
@@ -70,6 +140,7 @@ export default function Auth() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
                 className="h-11"
               />
             </div>
@@ -86,8 +157,8 @@ export default function Auth() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" size="lg">
-              {isLogin ? "Sign In" : "Create Account"}
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              {loading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
             </Button>
           </form>
 
@@ -102,7 +173,7 @@ export default function Auth() {
             </div>
           </div>
 
-          <Button variant="outline" className="w-full" type="button">
+          <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn}>
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
               <path
                 fill="currentColor"

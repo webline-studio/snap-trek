@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BottomNav } from "@/components/BottomNav";
-import { Search, MapPin, Sparkles } from "lucide-react";
+import { Search, MapPin, Sparkles, Send } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const locals = [
   {
@@ -59,7 +63,142 @@ const planners = [
 
 export default function Chat() {
   const navigate = useNavigate();
+  const params = useParams();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [selectedChat, setSelectedChat] = useState<any>(null);
+
+  // Load messages for selected chat
+  useEffect(() => {
+    if (!params.id || !user) return;
+
+    const loadMessages = async () => {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        toast.error("Failed to load messages");
+        return;
+      }
+
+      setMessages(data || []);
+    };
+
+    loadMessages();
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel("messages")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          setMessages((prev) => [...prev, payload.new]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [params.id, user]);
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedChat || !user) return;
+
+    const { error } = await supabase.from("messages").insert({
+      content: newMessage,
+      sender_id: user.id,
+      receiver_id: selectedChat.id,
+    });
+
+    if (error) {
+      toast.error("Failed to send message");
+      return;
+    }
+
+    setNewMessage("");
+  };
+
+  // If a chat is selected, show message view
+  if (params.id && selectedChat) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        {/* Chat Header */}
+        <div className="sticky top-0 bg-card border-b p-4 z-10">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/chat")}
+            >
+              ← Back
+            </Button>
+            <img
+              src={selectedChat.avatar}
+              alt={selectedChat.name}
+              className="w-10 h-10 rounded-full"
+            />
+            <div>
+              <h2 className="font-semibold">{selectedChat.name}</h2>
+              <p className="text-xs text-muted-foreground">
+                {selectedChat.location || selectedChat.specialty}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-4">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${
+                msg.sender_id === user?.id ? "justify-end" : "justify-start"
+              }`}
+            >
+              <div
+                className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                  msg.sender_id === user?.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted"
+                }`}
+              >
+                <p>{msg.content}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Message Input */}
+        <div className="fixed bottom-16 left-0 right-0 bg-card border-t p-4">
+          <div className="flex gap-2 max-w-4xl mx-auto">
+            <Input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Type a message..."
+              onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+              className="flex-1"
+            />
+            <Button onClick={sendMessage} size="icon">
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        <BottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -99,7 +238,10 @@ export default function Chat() {
             <Card
               key={local.id}
               className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate(`/chat/${local.id}`)}
+              onClick={() => {
+                setSelectedChat(local);
+                navigate(`/chat/${local.id}`);
+              }}
             >
               <div className="flex items-start gap-3">
                 <div className="relative">
@@ -138,7 +280,10 @@ export default function Chat() {
             <Card
               key={planner.id}
               className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate(`/chat/${planner.id}`)}
+              onClick={() => {
+                setSelectedChat(planner);
+                navigate(`/chat/${planner.id}`);
+              }}
             >
               <div className="flex items-start gap-3">
                 <div className="relative">
