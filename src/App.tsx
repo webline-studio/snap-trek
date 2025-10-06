@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ThemeProvider } from "@/hooks/useTheme";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Home from "./pages/Home";
 import Reels from "./pages/Reels";
@@ -17,11 +18,12 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner position="top-center" />
-      <BrowserRouter>
+    <BrowserRouter>
+      <ThemeProvider>
         <AuthProvider>
+          <TooltipProvider>
+          <Toaster />
+          <Sonner position="top-center" />
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
@@ -31,9 +33,10 @@ const App = () => (
             <Route path="/plan/:reelId" element={<ProtectedRoute><PlanTrip /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+        </TooltipProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  </BrowserRouter>
   </QueryClientProvider>
 );
 

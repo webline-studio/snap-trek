@@ -1,11 +1,20 @@
-import { Settings, MapPin, Heart, Bookmark, LogOut } from "lucide-react";
+import { Settings, MapPin, Heart, Bookmark, LogOut, Moon, Sun, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BottomNav } from "@/components/BottomNav";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
+import { useNavigate } from "react-router-dom";
 
 export default function Profile() {
   const { user, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
 
   const stats = [
     { label: "Trips Booked", value: "3", icon: MapPin },
@@ -58,6 +67,42 @@ export default function Profile() {
           })}
         </div>
 
+        {/* Theme Settings */}
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold mb-3">Appearance</h3>
+          <Card className="p-4">
+            <div className="space-y-3">
+              <p className="font-medium mb-3">Theme</p>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  variant={theme === "light" ? "default" : "outline"}
+                  onClick={() => setTheme("light")}
+                  className="flex flex-col gap-2 h-auto py-3"
+                >
+                  <Sun className="w-5 h-5" />
+                  <span className="text-xs">Light</span>
+                </Button>
+                <Button
+                  variant={theme === "dark" ? "default" : "outline"}
+                  onClick={() => setTheme("dark")}
+                  className="flex flex-col gap-2 h-auto py-3"
+                >
+                  <Moon className="w-5 h-5" />
+                  <span className="text-xs">Dark</span>
+                </Button>
+                <Button
+                  variant={theme === "system" ? "default" : "outline"}
+                  onClick={() => setTheme("system")}
+                  className="flex flex-col gap-2 h-auto py-3"
+                >
+                  <Monitor className="w-5 h-5" />
+                  <span className="text-xs">System</span>
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+
         {/* Quick Actions */}
         <div className="space-y-2">
           <h3 className="text-lg font-semibold mb-3">Quick Actions</h3>
@@ -91,7 +136,7 @@ export default function Profile() {
         </div>
 
         {/* Logout */}
-        <Button variant="outline" className="w-full" onClick={signOut}>
+        <Button variant="outline" className="w-full" onClick={handleSignOut}>
           <LogOut className="w-4 h-4 mr-2" />
           Sign Out
         </Button>
