@@ -1,71 +1,141 @@
-import { useState } from "react";
-import { BottomNav } from "@/components/BottomNav";
-import { Heart, MessageCircle, Bookmark, Send } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Heart, MessageCircle, Send, Bookmark } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Avatar } from "@/components/ui/avatar";
-
-// Mock data for stories and posts
-const stories = [
-  { id: 1, user: "Sarah", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah", hasStory: true },
-  { id: 2, user: "Alex", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex", hasStory: true },
-  { id: 3, user: "Mike", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike", hasStory: true },
-  { id: 4, user: "Emma", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emma", hasStory: true },
-];
-
-const posts = [
-  {
-    id: 1,
-    user: "Sarah Wanderlust",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
-    location: "Santorini, Greece",
-    image: "https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=800",
-    likes: 1243,
-    caption: "Watching the sunset from Oia 🌅 Absolutely breathtaking! #santorini #greece #travel",
-    time: "2 hours ago",
-  },
-  {
-    id: 2,
-    user: "Alex Explorer",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
-    location: "Ubud, Bali",
-    image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800",
-    likes: 2156,
-    caption: "Lost in the rice terraces 🌾 Nature's masterpiece #bali #ubud #ricefields",
-    time: "5 hours ago",
-  },
-  {
-    id: 3,
-    user: "Mike Adventures",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike",
-    location: "Tokyo, Japan",
-    image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800",
-    likes: 3421,
-    caption: "Neon dreams in Shibuya ✨ Tokyo never sleeps #tokyo #japan #citylife",
-    time: "1 day ago",
-  },
-];
+import { BottomNav } from "@/components/BottomNav";
+import { AddStoryDialog } from "@/components/AddStoryDialog";
+import { CommentsDialog } from "@/components/CommentsDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 
 export default function Home() {
-  const [likedPosts, setLikedPosts] = useState<number[]>([]);
-  const [savedPosts, setSavedPosts] = useState<number[]>([]);
+  const { user } = useAuth();
+  const [stories, setStories] = useState<any[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [likedPosts, setLikedPosts] = useState<string[]>([]);
+  const [savedPosts, setSavedPosts] = useState<string[]>([]);
 
-  const toggleLike = (postId: number) => {
-    setLikedPosts((prev) =>
-      prev.includes(postId) ? prev.filter((id) => id !== postId) : [...prev, postId]
-    );
+  useEffect(() => {
+    loadStories();
+    loadPosts();
+    loadUserInteractions();
+  }, [user]);
+
+  const loadStories = async () => {
+    const { data, error } = await supabase
+      .from('stories')
+      .select(`
+        *,
+        profiles (
+          username,
+          profile_pic
+        )
+      `)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setStories(data || []);
+    }
   };
 
-  const toggleSave = (postId: number) => {
-    setSavedPosts((prev) =>
-      prev.includes(postId) ? prev.filter((id) => id !== postId) : [...prev, postId]
-    );
+  const loadPosts = async () => {
+    const { data, error } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        profiles (
+          username,
+          profile_pic
+        ),
+        comments (count)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setPosts(data || []);
+    }
+  };
+
+  const loadUserInteractions = async () => {
+    if (!user) return;
+
+    const { data: likes } = await supabase
+      .from('post_likes')
+      .select('post_id')
+      .eq('user_id', user.id);
+
+    const { data: saves } = await supabase
+      .from('saved_posts')
+      .select('post_id')
+      .eq('user_id', user.id);
+
+    if (likes) setLikedPosts(likes.map(l => l.post_id));
+    if (saves) setSavedPosts(saves.map(s => s.post_id));
+  };
+
+  const toggleLike = async (postId: string) => {
+    if (!user) return;
+
+    const isLiked = likedPosts.includes(postId);
+
+    try {
+      if (isLiked) {
+        await supabase
+          .from('post_likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', user.id);
+
+        setLikedPosts(prev => prev.filter(id => id !== postId));
+      } else {
+        await supabase
+          .from('post_likes')
+          .insert({ post_id: postId, user_id: user.id });
+
+        setLikedPosts(prev => [...prev, postId]);
+      }
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const toggleSave = async (postId: string) => {
+    if (!user) return;
+
+    const isSaved = savedPosts.includes(postId);
+
+    try {
+      if (isSaved) {
+        await supabase
+          .from('saved_posts')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', user.id);
+
+        setSavedPosts(prev => prev.filter(id => id !== postId));
+      } else {
+        await supabase
+          .from('saved_posts')
+          .insert({ post_id: postId, user_id: user.id });
+
+        setSavedPosts(prev => [...prev, postId]);
+      }
+    } catch (error: any) {
+      toast.error(error.message);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 md:pb-6">
       {/* Header */}
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-10">
-        <div className="container mx-auto px-4 py-3">
+        <div className="container mx-auto px-4 py-4">
           <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             TravelSnaps
           </h1>
@@ -73,100 +143,97 @@ export default function Home() {
       </div>
 
       {/* Stories */}
-      <div className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 overflow-x-auto">
-          <div className="flex gap-4">
+      <div className="bg-background border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+            <AddStoryDialog onAdd={loadStories} />
             {stories.map((story) => (
-              <div key={story.id} className="flex flex-col items-center gap-1 cursor-pointer">
+              <button key={story.id} className="flex-shrink-0 w-20 flex flex-col items-center gap-2">
                 <div className="relative">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-accent via-primary to-accent-foreground p-0.5">
-                    <div className="w-full h-full rounded-full bg-background p-0.5">
-                      <img
-                        src={story.avatar}
-                        alt={story.user}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    </div>
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#f09433] via-[#e6683c] to-[#bc1888] p-0.5">
+                    <img
+                      src={story.profiles?.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${story.user_id}`}
+                      alt={story.profiles?.username}
+                      className="w-full h-full rounded-full border-2 border-background object-cover"
+                    />
                   </div>
                 </div>
-                <span className="text-xs text-muted-foreground truncate max-w-[64px]">
-                  {story.user}
+                <span className="text-xs font-medium truncate w-full text-center">
+                  {story.profiles?.username || "User"}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
       </div>
 
       {/* Posts Feed */}
-      <div className="container mx-auto max-w-2xl">
+      <div className="container mx-auto max-w-2xl py-4 space-y-4">
         {posts.map((post) => (
-          <Card key={post.id} className="mb-4 overflow-hidden border-0 shadow-card">
+          <Card key={post.id} className="overflow-hidden">
             {/* Post Header */}
-            <div className="flex items-center gap-3 p-4">
-              <img
-                src={post.avatar}
-                alt={post.user}
-                className="w-10 h-10 rounded-full"
-              />
-              <div className="flex-1">
-                <p className="font-semibold text-sm">{post.user}</p>
-                <p className="text-xs text-muted-foreground">{post.location}</p>
+            <div className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img
+                  src={post.profiles?.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.user_id}`}
+                  alt={post.profiles?.username}
+                  className="w-10 h-10 rounded-full border-2 border-primary/20"
+                />
+                <div>
+                  <p className="font-semibold">{post.profiles?.username || "User"}</p>
+                  {post.location && <p className="text-sm text-muted-foreground">{post.location}</p>}
+                </div>
               </div>
             </div>
 
             {/* Post Image */}
-            <div className="relative aspect-square bg-muted">
-              <img
-                src={post.image}
-                alt={post.location}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <img
+              src={post.image_url}
+              alt="Post"
+              className="w-full aspect-square object-cover"
+            />
 
             {/* Post Actions */}
             <div className="p-4">
-              <div className="flex items-center gap-4 mb-3">
-                <button
-                  onClick={() => toggleLike(post.id)}
-                  className="transition-transform hover:scale-110"
-                >
-                  <Heart
-                    className={`w-6 h-6 ${
-                      likedPosts.includes(post.id)
-                        ? "fill-destructive text-destructive"
-                        : "text-foreground"
-                    }`}
-                  />
-                </button>
-                <button className="transition-transform hover:scale-110">
-                  <MessageCircle className="w-6 h-6" />
-                </button>
-                <button className="transition-transform hover:scale-110">
-                  <Send className="w-6 h-6" />
-                </button>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => toggleLike(post.id)}
+                    className="hover:text-muted-foreground transition-colors"
+                  >
+                    <Heart
+                      className={`w-6 h-6 ${
+                        likedPosts.includes(post.id) ? "fill-red-500 text-red-500" : ""
+                      }`}
+                    />
+                  </button>
+                  <CommentsDialog postId={post.id} commentCount={post.comments?.[0]?.count || 0} />
+                  <button className="hover:text-muted-foreground transition-colors">
+                    <Send className="w-6 h-6" />
+                  </button>
+                </div>
                 <button
                   onClick={() => toggleSave(post.id)}
-                  className="ml-auto transition-transform hover:scale-110"
+                  className="hover:text-muted-foreground transition-colors"
                 >
                   <Bookmark
                     className={`w-6 h-6 ${
-                      savedPosts.includes(post.id) ? "fill-foreground" : ""
+                      savedPosts.includes(post.id) ? "fill-current" : ""
                     }`}
                   />
                 </button>
               </div>
 
-              <p className="font-semibold text-sm mb-2">
-                {likedPosts.includes(post.id) ? post.likes + 1 : post.likes} likes
+              <p className="font-semibold mb-2">{post.likes} likes</p>
+              {post.caption && (
+                <p className="mb-2">
+                  <span className="font-semibold mr-2">{post.profiles?.username || "User"}</span>
+                  {post.caption}
+                </p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
               </p>
-
-              <p className="text-sm mb-2">
-                <span className="font-semibold mr-2">{post.user.split(" ")[0]}</span>
-                {post.caption}
-              </p>
-
-              <p className="text-xs text-muted-foreground">{post.time}</p>
             </div>
           </Card>
         ))}

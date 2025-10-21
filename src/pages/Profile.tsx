@@ -2,14 +2,68 @@ import { Settings, MapPin, Heart, Bookmark, LogOut, Moon, Sun, Monitor } from "l
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BottomNav } from "@/components/BottomNav";
+import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function Profile() {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const [profile, setProfile] = useState<any>(null);
+  const [savedPosts, setSavedPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProfile();
+    loadSavedPosts();
+  }, [user]);
+
+  const loadProfile = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setProfile(data);
+    }
+    setLoading(false);
+  };
+
+  const loadSavedPosts = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('saved_posts')
+      .select(`
+        *,
+        posts (
+          *,
+          profiles (
+            username,
+            profile_pic
+          )
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setSavedPosts(data?.map(sp => sp.posts) || []);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -39,32 +93,36 @@ export default function Profile() {
         <Card className="p-6">
           <div className="flex flex-col items-center text-center">
             <img
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=User"
+              src={profile?.profile_pic || "https://api.dicebear.com/7.x/avataaars/svg?seed=User"}
               alt="Profile"
-              className="w-24 h-24 rounded-full mb-4 border-4 border-primary/20"
+              className="w-24 h-24 rounded-full mb-4 border-4 border-primary/20 object-cover"
             />
             <h2 className="text-2xl font-bold mb-1">
-              {user?.user_metadata?.username || "Traveler"}
+              {profile?.username || "Traveler"}
             </h2>
-            <p className="text-muted-foreground mb-4">{user?.email}</p>
-            <Button variant="outline">
-              Edit Profile
-            </Button>
+            <p className="text-muted-foreground mb-2">{user?.email}</p>
+            {profile?.bio && <p className="text-sm text-muted-foreground mb-4">{profile.bio}</p>}
+            <EditProfileDialog profile={profile} onUpdate={loadProfile} />
           </div>
         </Card>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
-          {stats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={stat.label} className="p-4 text-center">
-                <Icon className="w-5 h-5 mx-auto mb-2 text-primary" />
-                <p className="text-2xl font-bold mb-1">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-              </Card>
-            );
-          })}
+          <Card className="p-4 text-center">
+            <MapPin className="w-5 h-5 mx-auto mb-2 text-primary" />
+            <p className="text-2xl font-bold mb-1">0</p>
+            <p className="text-xs text-muted-foreground">Trips Booked</p>
+          </Card>
+          <Card className="p-4 text-center">
+            <Bookmark className="w-5 h-5 mx-auto mb-2 text-primary" />
+            <p className="text-2xl font-bold mb-1">{savedPosts.length}</p>
+            <p className="text-xs text-muted-foreground">Saved</p>
+          </Card>
+          <Card className="p-4 text-center">
+            <Heart className="w-5 h-5 mx-auto mb-2 text-primary" />
+            <p className="text-2xl font-bold mb-1">0</p>
+            <p className="text-xs text-muted-foreground">Liked</p>
+          </Card>
         </div>
 
         {/* Theme Settings */}
@@ -102,6 +160,24 @@ export default function Profile() {
             </div>
           </Card>
         </div>
+
+        {/* Saved Posts */}
+        {savedPosts.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold mb-3">Saved Posts</h3>
+            <div className="grid grid-cols-3 gap-1">
+              {savedPosts.map((post) => (
+                <div key={post.id} className="aspect-square">
+                  <img
+                    src={post.image_url}
+                    alt="Saved post"
+                    className="w-full h-full object-cover rounded"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="space-y-2">
