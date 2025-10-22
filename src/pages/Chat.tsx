@@ -72,13 +72,13 @@ export default function Chat() {
 
   // Load messages for selected chat
   useEffect(() => {
-    if (!params.id || !user) return;
+    if (!params.id || !user || !selectedChat) return;
 
     const loadMessages = async () => {
       const { data, error } = await supabase
         .from("messages")
         .select("*")
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${params.id}),and(sender_id.eq.${params.id},receiver_id.eq.${user.id})`)
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -93,7 +93,7 @@ export default function Chat() {
 
     // Subscribe to realtime updates
     const channel = supabase
-      .channel("messages")
+      .channel(`messages:${params.id}`)
       .on(
         "postgres_changes",
         {
@@ -101,8 +101,14 @@ export default function Chat() {
           schema: "public",
           table: "messages",
         },
-        (payload) => {
-          setMessages((prev) => [...prev, payload.new]);
+        (payload: any) => {
+          const newMessage = payload.new;
+          if (
+            (newMessage.sender_id === user.id && newMessage.receiver_id === params.id) ||
+            (newMessage.sender_id === params.id && newMessage.receiver_id === user.id)
+          ) {
+            setMessages((prev) => [...prev, newMessage]);
+          }
         }
       )
       .subscribe();
@@ -110,15 +116,15 @@ export default function Chat() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [params.id, user]);
+  }, [params.id, user, selectedChat]);
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedChat || !user) return;
+    if (!newMessage.trim() || !params.id || !user) return;
 
     const { error } = await supabase.from("messages").insert({
       content: newMessage,
       sender_id: user.id,
-      receiver_id: selectedChat.id,
+      receiver_id: params.id,
     });
 
     if (error) {
