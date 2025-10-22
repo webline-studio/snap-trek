@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { BottomNav } from "@/components/BottomNav";
 import { AddStoryDialog } from "@/components/AddStoryDialog";
 import { CommentsDialog } from "@/components/CommentsDialog";
+import { StoryViewer } from "@/components/StoryViewer";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,6 +16,8 @@ export default function Home() {
   const [posts, setPosts] = useState<any[]>([]);
   const [likedPosts, setLikedPosts] = useState<string[]>([]);
   const [savedPosts, setSavedPosts] = useState<string[]>([]);
+  const [storyViewerOpen, setStoryViewerOpen] = useState(false);
+  const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
 
   useEffect(() => {
     loadStories();
@@ -147,8 +150,15 @@ export default function Home() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
             <AddStoryDialog onAdd={loadStories} />
-            {stories.map((story) => (
-              <button key={story.id} className="flex-shrink-0 w-20 flex flex-col items-center gap-2">
+            {stories.map((story, index) => (
+              <button
+                key={story.id}
+                onClick={() => {
+                  setSelectedStoryIndex(index);
+                  setStoryViewerOpen(true);
+                }}
+                className="flex-shrink-0 w-20 flex flex-col items-center gap-2"
+              >
                 <div className="relative">
                   <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#f09433] via-[#e6683c] to-[#bc1888] p-0.5">
                     <img
@@ -238,6 +248,13 @@ export default function Home() {
           </Card>
         ))}
       </div>
+
+      <StoryViewer
+        stories={stories}
+        initialIndex={selectedStoryIndex}
+        open={storyViewerOpen}
+        onClose={() => setStoryViewerOpen(false)}
+      />
 
       <BottomNav />
     </div>

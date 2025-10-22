@@ -1,16 +1,41 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Calendar, Users, MapPin, Sparkles, Heart, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { mockReels, mockPackages } from "@/data/mockData";
+import { HotelDialog } from "@/components/HotelDialog";
+import { BookingDialog } from "@/components/BookingDialog";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function PlanTrip() {
   const { reelId } = useParams();
   const navigate = useNavigate();
+  const [hotels, setHotels] = useState<any[]>([]);
+  const [selectedHotel, setSelectedHotel] = useState<any>(null);
+  const [hotelDialogOpen, setHotelDialogOpen] = useState(false);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
 
   const reel = mockReels.find((r) => r.id === reelId);
   const pkg = reel ? mockPackages[reel.id] : null;
+
+  useEffect(() => {
+    if (reel) {
+      loadHotels();
+    }
+  }, [reel]);
+
+  const loadHotels = async () => {
+    const { data, error } = await supabase
+      .from("hotels")
+      .select("*")
+      .eq("destination", reel?.location.name || "");
+
+    if (!error && data) {
+      setHotels(data);
+    }
+  };
 
   if (!reel || !pkg) {
     return (
@@ -20,11 +45,9 @@ export default function PlanTrip() {
     );
   }
 
-  const handleBook = () => {
-    toast.success("Booking feature coming soon! 🎉", {
-      description: "We'll notify you when booking is available.",
-      duration: 3000,
-    });
+  const handleHotelSelect = (hotel: any) => {
+    setSelectedHotel(hotel);
+    setBookingDialogOpen(true);
   };
 
   return (
@@ -160,27 +183,40 @@ export default function PlanTrip() {
         <div className="mb-6">
           <h2 className="text-xl font-bold mb-4">Stay Options</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="overflow-hidden cursor-pointer hover:shadow-card transition-all">
-                <div className="aspect-video bg-muted">
-                  <img
-                    src={`https://images.unsplash.com/photo-${1566073771032 + i}0-a458c67da50?w=400`}
-                    alt={`Stay ${i}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="p-4">
-                  <h4 className="font-semibold mb-1">Luxury Villa {i}</h4>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Ocean view • Private pool
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <p className="font-bold">${199 + i * 50}/night</p>
-                    <p className="text-sm text-muted-foreground">★ 4.{8 + i}</p>
+            {hotels.length > 0 ? (
+              hotels.map((hotel) => (
+                <Card
+                  key={hotel.id}
+                  className="overflow-hidden cursor-pointer hover:shadow-card transition-all"
+                  onClick={() => {
+                    setSelectedHotel(hotel);
+                    setHotelDialogOpen(true);
+                  }}
+                >
+                  <div className="aspect-video bg-muted">
+                    <img
+                      src={hotel.image_url}
+                      alt={hotel.name}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                </div>
-              </Card>
-            ))}
+                  <div className="p-4">
+                    <h4 className="font-semibold mb-1">{hotel.name}</h4>
+                    <p className="text-sm text-muted-foreground mb-2 line-clamp-1">
+                      {hotel.description}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="font-bold">${hotel.price_per_night}/night</p>
+                      <p className="text-sm text-muted-foreground">★ {hotel.rating}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            ) : (
+              <p className="col-span-2 text-center text-muted-foreground">
+                No hotels available for this destination yet.
+              </p>
+            )}
           </div>
         </div>
 
@@ -192,12 +228,28 @@ export default function PlanTrip() {
           <Button
             className="flex-1 bg-gradient-to-r from-accent to-accent-foreground hover:shadow-elegant hover:scale-105 transition-all"
             size="lg"
-            onClick={handleBook}
+            onClick={() => setBookingDialogOpen(true)}
           >
             Book This Trip
           </Button>
         </div>
       </div>
+
+      <HotelDialog
+        hotel={selectedHotel}
+        open={hotelDialogOpen}
+        onClose={() => setHotelDialogOpen(false)}
+        onBook={handleHotelSelect}
+      />
+
+      <BookingDialog
+        tripName={pkg.title}
+        destination={`${reel.location.name}, ${reel.location.country}`}
+        basePrice={pkg.price}
+        selectedHotel={selectedHotel}
+        open={bookingDialogOpen}
+        onClose={() => setBookingDialogOpen(false)}
+      />
     </div>
   );
 }

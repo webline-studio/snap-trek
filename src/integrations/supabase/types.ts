@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          created_at: string
+          destination: string
+          end_date: string
+          guests: number
+          hotel_name: string | null
+          id: string
+          start_date: string
+          status: string
+          total_price: number
+          trip_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          destination: string
+          end_date: string
+          guests?: number
+          hotel_name?: string | null
+          id?: string
+          start_date: string
+          status?: string
+          total_price: number
+          trip_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          destination?: string
+          end_date?: string
+          guests?: number
+          hotel_name?: string | null
+          id?: string
+          start_date?: string
+          status?: string
+          total_price?: number
+          trip_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string
@@ -76,6 +129,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      hotels: {
+        Row: {
+          amenities: string[] | null
+          created_at: string
+          description: string | null
+          destination: string
+          id: string
+          image_url: string
+          name: string
+          price_per_night: number
+          rating: number | null
+        }
+        Insert: {
+          amenities?: string[] | null
+          created_at?: string
+          description?: string | null
+          destination: string
+          id?: string
+          image_url: string
+          name: string
+          price_per_night: number
+          rating?: number | null
+        }
+        Update: {
+          amenities?: string[] | null
+          created_at?: string
+          description?: string | null
+          destination?: string
+          id?: string
+          image_url?: string
+          name?: string
+          price_per_night?: number
+          rating?: number | null
+        }
+        Relationships: []
       }
       messages: {
         Row: {
