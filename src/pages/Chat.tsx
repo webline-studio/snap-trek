@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { BottomNav } from "@/components/BottomNav";
+import { TopNav } from "@/components/TopNav";
 import { Search, MapPin, Sparkles, Send } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -207,7 +208,8 @@ export default function Chat() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 md:pb-6">
+      <TopNav />
       {/* Header */}
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-10">
         <div className="container mx-auto px-4 py-4">

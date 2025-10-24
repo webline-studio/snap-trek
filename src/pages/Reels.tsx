@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ReelPlayer } from "@/components/ReelPlayer";
 import { BottomNav } from "@/components/BottomNav";
+import { TopNav } from "@/components/TopNav";
 import { mockReels } from "@/data/mockData";
 import { Reel } from "@/types/travel";
 import { toast } from "sonner";

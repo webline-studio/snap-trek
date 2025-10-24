@@ -12,7 +12,9 @@ import Chat from "./pages/Chat";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import PlanTrip from "./pages/PlanTrip";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import "./i18n/config";
 
 const queryClient = new QueryClient();
 
@@ -29,7 +31,9 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
             <Route path="/reels" element={<ProtectedRoute><Reels /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+            <Route path="/chat/:id" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/plan/:reelId" element={<ProtectedRoute><PlanTrip /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

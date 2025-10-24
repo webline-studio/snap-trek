@@ -1,23 +1,46 @@
 import { useState, useEffect } from "react";
-import { Heart, MessageCircle, Send, Bookmark } from "lucide-react";
+import { Heart, MessageCircle, Send, Bookmark, Trash2, MoreVertical } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { BottomNav } from "@/components/BottomNav";
+import { TopNav } from "@/components/TopNav";
 import { AddStoryDialog } from "@/components/AddStoryDialog";
+import { AddPostDialog } from "@/components/AddPostDialog";
 import { CommentsDialog } from "@/components/CommentsDialog";
 import { StoryViewer } from "@/components/StoryViewer";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { useTranslation } from "react-i18next";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [stories, setStories] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [likedPosts, setLikedPosts] = useState<string[]>([]);
   const [savedPosts, setSavedPosts] = useState<string[]>([]);
   const [storyViewerOpen, setStoryViewerOpen] = useState(false);
   const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
+  const [deletePostId, setDeletePostId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     loadStories();
@@ -134,14 +157,38 @@ export default function Home() {
     }
   };
 
+  const handleDeletePost = async () => {
+    if (!deletePostId) return;
+
+    try {
+      // Delete post from database
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', deletePostId);
+
+      if (error) throw error;
+
+      toast.success('Post deleted successfully');
+      setDeleteDialogOpen(false);
+      setDeletePostId(null);
+      loadPosts();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-6">
-      {/* Header */}
-      <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-10">
-        <div className="container mx-auto px-4 py-4">
+      <TopNav />
+      
+      {/* Mobile Header */}
+      <div className="md:hidden sticky top-0 bg-background/95 backdrop-blur-sm border-b z-10">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             TravelSnaps
           </h1>
+          <AddPostDialog onAdd={loadPosts} trigger={<Button size="sm" className="gap-2">+ {t('post')}</Button>} />
         </div>
       </div>
 
@@ -194,6 +241,27 @@ export default function Home() {
                   {post.location && <p className="text-sm text-muted-foreground">{post.location}</p>}
                 </div>
               </div>
+              {user?.id === post.user_id && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="w-5 h-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => {
+                        setDeletePostId(post.id);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {t('deletePost')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
 
             {/* Post Image */}
@@ -254,7 +322,27 @@ export default function Home() {
         initialIndex={selectedStoryIndex}
         open={storyViewerOpen}
         onClose={() => setStoryViewerOpen(false)}
+        onDelete={loadStories}
       />
+
+      <AddPostDialog onAdd={loadPosts} />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deletePost')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('deletePostConfirm')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePost}>
+              {t('delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <BottomNav />
     </div>

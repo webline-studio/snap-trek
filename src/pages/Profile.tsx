@@ -2,6 +2,7 @@ import { Settings, MapPin, Heart, Bookmark, LogOut, Moon, Sun, Monitor } from "l
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BottomNav } from "@/components/BottomNav";
+import { TopNav } from "@/components/TopNav";
 import { EditProfileDialog } from "@/components/EditProfileDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
@@ -78,6 +79,7 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-6">
+      <TopNav />
       {/* Header */}
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -200,7 +202,10 @@ export default function Profile() {
               <span className="text-muted-foreground">→</span>
             </div>
           </Card>
-          <Card className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+          <Card 
+            className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => navigate("/settings")}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Settings className="w-5 h-5 text-primary" />
